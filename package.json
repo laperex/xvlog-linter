@@ -4,7 +4,6 @@
 	"description": "Verilog and SystemVerilog linting using Xilinx xvlog (Vivado)",
 	"version": "0.0.1",
 	"publisher": "your-publisher-id",
-	"icon": "images/icon.png",
 	"engines": {
 		"vscode": "^1.93.1"
 	},
