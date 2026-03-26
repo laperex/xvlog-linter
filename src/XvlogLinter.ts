@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 import * as vscode from 'vscode';
-import { execFile, ExecFileException, ChildProcess } from 'child_process';
+import { execFile, ExecFileException } from 'child_process';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 
-const MAX_BUFFER = 10 * 1024 * 1024; // 10 MB — prevents truncation on files with many errors
-const DEBOUNCE_MS = 500;
+const MAX_BUFFER = 10 * 1024 * 1024;
 
 interface LinterConfig {
 	linterInstalledPath: string;
-	arguments: string;
+	arguments: string[];
 	includePath: string[];
+	addFileLocationToIncludePath: boolean;
+	runAtFileLocation: boolean;
 }
 
 interface Logger {
@@ -31,57 +32,45 @@ function createLogger(category: string[]): Logger {
 
 export function parseDiagnostics(stdout: string): vscode.Diagnostic[] {
 	const diagnostics: vscode.Diagnostic[] = [];
-	stdout.split(/\r?\n/g).forEach((line) => {
+	for (const line of stdout.split(/\r?\n/g)) {
 		const match = line.match(
 			/^(ERROR|WARNING):\s+\[(VRFC\b[^\]]*)\]\s+(.*\S)\s+\[(.*):(\d+)\]\s*$/
 		);
 		if (!match) {
-			return;
+			continue;
 		}
-		const lineno = parseInt(match[5]) - 1;
+		const lineno = parseInt(match[5], 10) - 1;
 		diagnostics.push({
-			severity:
-				match[1] === 'ERROR'
-					? vscode.DiagnosticSeverity.Error
-					: vscode.DiagnosticSeverity.Warning,
+			severity: match[1] === 'ERROR'
+				? vscode.DiagnosticSeverity.Error
+				: vscode.DiagnosticSeverity.Warning,
 			code: match[2],
 			message: `[${match[2]}] ${match[3]}`,
 			range: new vscode.Range(lineno, 0, lineno, Number.MAX_VALUE),
 			source: 'xvlog',
 		});
-	});
+	}
 	return diagnostics;
 }
 
 export default class XvlogLinter {
-	private diagnosticCollection: vscode.DiagnosticCollection;
-	private logger: Logger;
+	private readonly diagnosticCollection: vscode.DiagnosticCollection;
+	private readonly logger: Logger;
 	private config: LinterConfig = {
 		linterInstalledPath: '',
-		arguments: '',
+		arguments: [],
 		includePath: [],
+		addFileLocationToIncludePath: false,
+		runAtFileLocation: false,
 	};
 
-	/** Persistent temp dir reused across lints so xvlog can warm its xsim.dir cache. */
+	/** Persistent temp dir - reused across lints, deleted only on dispose. */
 	private workDir: string | undefined;
-
-	/** Debounce timer — prevents firing xvlog on every keystroke. */
-	private debounceTimer: NodeJS.Timeout | undefined;
-
-	/** Currently running xvlog process — killed when a newer lint supersedes it. */
-	private runningProcess: ChildProcess | undefined;
-
-	/** Last linted content per document URI — skips xvlog when nothing changed. */
-	private lastLintedContent = new Map<string, string>();
 
 	constructor(diagnosticCollection: vscode.DiagnosticCollection) {
 		this.diagnosticCollection = diagnosticCollection;
 		this.logger = createLogger(['Verilog', 'Linter', 'xvlog']);
-
-		vscode.workspace.onDidChangeConfiguration(() => {
-			this.loadConfig();
-		});
-
+		vscode.workspace.onDidChangeConfiguration(() => this.loadConfig());
 		this.loadConfig();
 	}
 
@@ -91,13 +80,22 @@ export default class XvlogLinter {
 			.get<string>('xvlog.path', '');
 
 		const xvlog = vscode.workspace.getConfiguration('xvlog.linting');
-		this.config.arguments = xvlog.get<string>('arguments', '');
+
+		const rawArgs = xvlog.get<string>('arguments', '').trim();
+		this.config.arguments = rawArgs.length > 0 ? rawArgs.split(/\s+/) : [];
+
 		this.config.includePath = xvlog
 			.get<string[]>('includePath', [])
-			.map((p) => this.resolvePath(p));
+			.map((p) => this.resolveWorkspacePath(p));
+
+		this.config.addFileLocationToIncludePath =
+			xvlog.get<boolean>('addFileLocationToIncludePath', false);
+
+		this.config.runAtFileLocation =
+			xvlog.get<boolean>('runAtFileLocation', false);
 	}
 
-	private resolvePath(inputPath: string): string {
+	private resolveWorkspacePath(inputPath: string): string {
 		if (path.isAbsolute(inputPath)) {
 			return inputPath;
 		}
@@ -117,81 +115,90 @@ export default class XvlogLinter {
 		return this.workDir;
 	}
 
-	/** Cleans up all resources. Call from extension deactivate(). */
 	public dispose(): void {
-		clearTimeout(this.debounceTimer);
-		this.runningProcess?.kill();
-		this.runningProcess = undefined;
 		if (this.workDir) {
 			fs.rmSync(this.workDir, { recursive: true, force: true });
 			this.workDir = undefined;
 		}
-		this.lastLintedContent.clear();
+		this.diagnosticCollection.clear();
 	}
 
-	public startLint(doc: vscode.TextDocument): void {
-		clearTimeout(this.debounceTimer);
-		this.debounceTimer = setTimeout(() => this.lint(doc), DEBOUNCE_MS);
-	}
+	public lint(doc: vscode.TextDocument): void {
+		const resolvedBin = this.config.linterInstalledPath
+			? path.join(this.config.linterInstalledPath, 'xvlog')
+			: 'xvlog';
 
-	private lint(doc: vscode.TextDocument): void {
-		// Content hash skip — bail early if nothing has changed since the last lint.
-		const content = doc.getText();
-		const key = doc.uri.toString();
-		if (this.lastLintedContent.get(key) === content) {
-			this.logger.info('Content unchanged, skipping lint');
+		// Verify the binary exists before spawning and surface a clear error.
+		try {
+			if (this.config.linterInstalledPath) {
+				fs.accessSync(resolvedBin, fs.constants.X_OK);
+			}
+		} catch {
+			vscode.window.showErrorMessage(
+				`xvlog-linter: Cannot find xvlog at "${resolvedBin}". ` +
+				`Check the xvlog.path setting.`
+			);
 			return;
-		}
-		this.lastLintedContent.set(key, content);
-
-		// Kill any in-flight xvlog process that this lint supersedes.
-		if (this.runningProcess) {
-			this.runningProcess.kill();
-			this.runningProcess = undefined;
-			this.logger.info('Killed previous in-flight lint process');
 		}
 
 		const workDir = this.getWorkDir();
 
-		// Write current (possibly unsaved) buffer content to a temp file so xvlog
-		// always lints what is in the editor, not just what is on disk.
+		// Write the live buffer to a temp file so unsaved changes are linted.
 		const ext = doc.languageId === 'systemverilog' ? '.sv' : '.v';
 		const tmpFile = path.join(workDir, `lint_input${ext}`);
-		fs.writeFileSync(tmpFile, content, 'utf8');
+		fs.writeFileSync(tmpFile, doc.getText(), 'utf8');
 
-		const binPath = path.join(this.config.linterInstalledPath, 'xvlog');
+		// Build include path list.
+		const includePaths = [...this.config.includePath];
+		if (this.config.addFileLocationToIncludePath) {
+			const fileDir = path.dirname(doc.uri.fsPath);
+			if (!includePaths.includes(fileDir)) {
+				includePaths.push(fileDir);
+			}
+		}
+
+		// Build argument list.
 		const args: string[] = ['-nolog'];
-
 		if (doc.languageId === 'systemverilog') {
 			args.push('-sv');
 		}
-
-		this.config.includePath.forEach((p) => args.push('-i', p));
-
-		if (this.config.arguments.trim().length > 0) {
-			args.push(...this.config.arguments.trim().split(/\s+/));
-		}
-
+		includePaths.forEach((p) => args.push('-i', p));
+		args.push(...this.config.arguments);
 		args.push(tmpFile);
 
-		this.logger.info(`Executing: ${binPath} ${args.join(' ')}`, { cwd: workDir });
+		// runAtFileLocation: run xvlog from the source file's directory instead
+		// of the temp dir. Useful when relative `include paths in the source
+		// file itself need to resolve from the original location.
+		const cwd = this.config.runAtFileLocation
+			? path.dirname(doc.uri.fsPath)
+			: workDir;
 
-		this.runningProcess = execFile(
-			binPath,
+		this.logger.info(`Executing: ${resolvedBin} ${args.join(' ')}`, { cwd });
+
+		execFile(
+			resolvedBin,
 			args,
-			{ cwd: workDir, maxBuffer: MAX_BUFFER },
-			(_error: ExecFileException | null, stdout: string, _stderr: string) => {
-				this.runningProcess = undefined;
+			{ cwd, maxBuffer: MAX_BUFFER },
+			(error: ExecFileException | null, stdout: string, _stderr: string) => {
+				// execFile errors on non-zero exit, which xvlog does whenever it
+				// finds lint errors. Only treat it as a real failure when there
+				// is no stdout to parse (i.e. the binary failed to run at all).
+				if (error && !stdout) {
+					this.logger.error('xvlog failed to run', { message: error.message });
+					vscode.window.showErrorMessage(
+						`xvlog-linter: xvlog failed to run - ${error.message}`
+					);
+					return;
+				}
 
 				const diagnostics = parseDiagnostics(stdout);
-				this.logger.info(`${diagnostics.length} errors/warnings returned`);
+				this.logger.info(`${diagnostics.length} diagnostics returned`);
 				this.diagnosticCollection.set(doc.uri, diagnostics);
 			}
 		);
 	}
 
 	public removeFileDiagnostics(doc: vscode.TextDocument): void {
-		this.lastLintedContent.delete(doc.uri.toString());
 		this.diagnosticCollection.delete(doc.uri);
 	}
 }

@@ -73,6 +73,12 @@
 					"default": false,
 					"description": "Run xvlog in the directory of the file being linted instead of the workspace root.",
 					"scope": "resource"
+				},
+				"xvlog.linting.addFileLocationToIncludePath": {
+					"type": "boolean",
+					"default": true,
+					"description": "Automatically add the directory of the file being linted to the xvlog include path.",
+					"scope": "resource"
 				}
 			}
 		}
