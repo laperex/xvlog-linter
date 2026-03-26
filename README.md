@@ -4,7 +4,6 @@ Lint Verilog and SystemVerilog files directly in VS Code using Xilinx's `xvlog` 
 
 ## Requirements
 
-- **Xilinx Vivado** or **Vivado Lab Edition** installed ([download here](https://www.xilinx.com/support/download.html))
 - `xvlog` must be accessible - either on your system `PATH` or configured via `verilog.linting.path`
 
 ## Features
