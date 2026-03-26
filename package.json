@@ -2,7 +2,7 @@
 	"name": "xvlog-linter",
 	"displayName": "xvlog linter",
 	"description": "Verilog and SystemVerilog linting using Xilinx xvlog (Vivado)",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"publisher": "laperex",
 	"engines": {
 		"vscode": "^1.93.1"
