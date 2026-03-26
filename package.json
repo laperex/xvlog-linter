@@ -1,8 +1,8 @@
 {
 	"name": "xvlog-linter",
-	"displayName": "xvlog Linter",
+	"displayName": "xvlog linter",
 	"description": "Verilog and SystemVerilog linting using Xilinx xvlog (Vivado)",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"publisher": "laperex",
 	"engines": {
 		"vscode": "^1.93.1"
@@ -39,7 +39,7 @@
 			}
 		],
 		"configuration": {
-			"title": "xvlog Linter",
+			"title": "xvlog linter",
 			"properties": {
 				"xvlog.path": {
 					"type": "string",
