@@ -3,7 +3,7 @@
 	"displayName": "xvlog Linter",
 	"description": "Verilog and SystemVerilog linting using Xilinx xvlog (Vivado)",
 	"version": "0.0.1",
-	"publisher": "your-publisher-id",
+	"publisher": "laperex",
 	"engines": {
 		"vscode": "^1.93.1"
 	},
