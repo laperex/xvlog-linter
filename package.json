@@ -42,25 +42,25 @@
 		"configuration": {
 			"title": "xvlog Linter",
 			"properties": {
-				"verilog.linting.path": {
+				"xvlog.path": {
 					"type": "string",
 					"default": "",
 					"description": "Path to the directory containing the xvlog binary. Leave empty if xvlog is already on your PATH.",
 					"scope": "resource"
 				},
-				"verilog.linting.xvlog.enabled": {
+				"xvlog.linting.enabled": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable or disable the xvlog linter.",
 					"scope": "resource"
 				},
-				"verilog.linting.xvlog.arguments": {
+				"xvlog.linting.arguments": {
 					"type": "string",
 					"default": "",
 					"description": "Additional command-line arguments passed to xvlog.",
 					"scope": "resource"
 				},
-				"verilog.linting.xvlog.includePath": {
+				"xvlog.linting.includePath": {
 					"type": "array",
 					"items": {
 						"type": "string"
@@ -69,7 +69,7 @@
 					"description": "Include paths for xvlog. Relative paths resolve from the workspace root.",
 					"scope": "resource"
 				},
-				"verilog.linting.xvlog.runAtFileLocation": {
+				"xvlog.linting.runAtFileLocation": {
 					"type": "boolean",
 					"default": false,
 					"description": "Run xvlog in the directory of the file being linted instead of the workspace root.",
@@ -105,5 +105,8 @@
 		"typescript": "^5.9.3",
 		"@vscode/test-cli": "^0.0.12",
 		"@vscode/test-electron": "^2.5.2"
+	},
+	"repository": {
+		"url": "https://github.com/laperex/xvlog-linter"
 	}
 }

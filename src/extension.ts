@@ -86,6 +86,6 @@ function isSupported(doc: vscode.TextDocument): boolean {
 
 function isEnabled(): boolean {
     return vscode.workspace
-        .getConfiguration('verilog.linting.xvlog')
+        .getConfiguration('xvlog.linting')
         .get<boolean>('enabled', true);
 }

@@ -88,9 +88,9 @@ export default class XvlogLinter {
 	private loadConfig(): void {
 		this.config.linterInstalledPath = vscode.workspace
 			.getConfiguration()
-			.get<string>('verilog.linting.path', '');
+			.get<string>('xvlog.path', '');
 
-		const xvlog = vscode.workspace.getConfiguration('verilog.linting.xvlog');
+		const xvlog = vscode.workspace.getConfiguration('xvlog.linting');
 		this.config.arguments = xvlog.get<string>('arguments', '');
 		this.config.includePath = xvlog
 			.get<string[]>('includePath', [])

@@ -4,7 +4,7 @@ Lint Verilog and SystemVerilog files directly in VS Code using Xilinx's `xvlog` 
 
 ## Requirements
 
-- `xvlog` must be accessible - either on your system `PATH` or configured via `verilog.linting.path`
+- `xvlog` must be accessible - either on your system `PATH` or configured via `xvlog.path`
 
 ## Features
 
@@ -18,24 +18,24 @@ Lint Verilog and SystemVerilog files directly in VS Code using Xilinx's `xvlog` 
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `verilog.linting.path` | `string` | `""` | Directory containing the `xvlog` binary. Leave empty if `xvlog` is on your PATH. |
-| `verilog.linting.xvlog.enabled` | `boolean` | `true` | Enable or disable the linter. |
-| `verilog.linting.xvlog.arguments` | `string` | `""` | Extra CLI arguments passed to `xvlog`. |
-| `verilog.linting.xvlog.includePath` | `string[]` | `[]` | Include paths. Relative paths resolve from the workspace root. |
-| `verilog.linting.xvlog.runAtFileLocation` | `boolean` | `false` | Run `xvlog` in the file's directory instead of the workspace root. |
+| `xvlog.path` | `string` | `""` | Directory containing the `xvlog` binary. Leave empty if `xvlog` is on your PATH. |
+| `xvlog.linting.enabled` | `boolean` | `true` | Enable or disable the linter. |
+| `xvlog.linting.arguments` | `string` | `""` | Extra CLI arguments passed to `xvlog`. |
+| `xvlog.linting.includePath` | `string[]` | `[]` | Include paths. Relative paths resolve from the workspace root. |
+| `xvlog.linting.runAtFileLocation` | `boolean` | `false` | Run `xvlog` in the file's directory instead of the workspace root. |
 
 ### Example `.vscode/settings.json`
 
 ```json
 {
-  "verilog.linting.path": "/tools/Xilinx/Vivado/2023.2/bin",
-  "verilog.linting.xvlog.enabled": true,
-  "verilog.linting.xvlog.arguments": "--define SIMULATION",
-  "verilog.linting.xvlog.includePath": [
+  "xvlog.path": "/tools/Xilinx/Vivado/2023.2/bin",
+  "xvlog.linting.enabled": true,
+  "xvlog.linting.arguments": "--define SIMULATION",
+  "xvlog.linting.includePath": [
     "rtl/include",
     "ip/headers"
   ],
-  "verilog.linting.xvlog.runAtFileLocation": false
+  "xvlog.linting.runAtFileLocation": false
 }
 ```
 
@@ -51,8 +51,8 @@ Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and search for:
 ## Known Issues
 
 - `xvlog` writes a `xvlog.pb` database file and `xvlog.dir/` folder in the working directory each time it runs. These can be safely deleted and are excluded via `.gitignore`.
-- On Windows with WSL, set `verilog.linting.path` to the WSL-accessible path (e.g. `/mnt/c/Xilinx/Vivado/2023.2/bin`) and ensure your terminal profile uses WSL.
-- `xvlog` does not support linting a file in isolation when it has unresolved cross-file dependencies - use `verilog.linting.xvlog.includePath` to point at your include directories.
+- On Windows with WSL, set `xvlog.path` to the WSL-accessible path (e.g. `/mnt/c/Xilinx/Vivado/2023.2/bin`) and ensure your terminal profile uses WSL.
+- `xvlog` does not support linting a file in isolation when it has unresolved cross-file dependencies - use `xvlog.linting.includePath` to point at your include directories.
 
 ## Release Notes
 
