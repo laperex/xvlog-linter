@@ -50,8 +50,6 @@ Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and search for:
 
 ## Known Issues
 
-- `xvlog` writes a `xvlog.pb` database file and `xvlog.dir/` folder in the working directory each time it runs. These can be safely deleted and are excluded via `.gitignore`.
-- On Windows with WSL, set `xvlog.path` to the WSL-accessible path (e.g. `/mnt/c/Xilinx/Vivado/2023.2/bin`) and ensure your terminal profile uses WSL.
 - `xvlog` does not support linting a file in isolation when it has unresolved cross-file dependencies - use `xvlog.linting.includePath` to point at your include directories.
 
 ## Release Notes
