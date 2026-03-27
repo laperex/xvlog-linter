@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import VeribleFormatter from './VeribleFormatter';
 import * as vscode from 'vscode';
 import XvlogLinter from './XvlogLinter';
 
@@ -11,6 +12,14 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(diagnosticCollection);
 
 	linter = new XvlogLinter(diagnosticCollection);
+
+	// Formatting provider - handles Format Document (Shift+Alt+F)
+	const formatter = new VeribleFormatter();
+	const formatterDisposable = vscode.languages.registerDocumentFormattingEditProvider(
+		SUPPORTED_LANGUAGES.map((lang) => ({ language: lang })),
+		formatter
+	);
+	context.subscriptions.push(formatterDisposable);
 
 	// Lint on open
 	context.subscriptions.push(

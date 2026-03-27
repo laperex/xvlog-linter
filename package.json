@@ -2,7 +2,7 @@
 	"name": "xvlog-linter",
 	"displayName": "xvlog linter",
 	"description": "Verilog and SystemVerilog linting using Xilinx xvlog (Vivado)",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"publisher": "laperex",
 	"engines": {
 		"vscode": "^1.93.1"
@@ -26,21 +26,45 @@
 	],
 	"main": "./dist/extension.js",
 	"contributes": {
+		"languages": [
+			{
+				"id": "verilog",
+				"aliases": ["Verilog", "verilog"],
+				"extensions": [".v", ".vh"]
+			},
+			{
+				"id": "systemverilog",
+				"aliases": ["SystemVerilog", "systemverilog"],
+				"extensions": [".sv", ".svh", ".svi"]
+			}
+		],
 		"commands": [
 			{
 				"command": "xvlog-linter.lint",
-				"title": "xvlog: Lint Current File",
-				"category": "Verilog"
+				"title": "Lint Current File",
+				"category": "xvlog"
 			},
 			{
 				"command": "xvlog-linter.clearDiagnostics",
-				"title": "xvlog: Clear Diagnostics",
-				"category": "Verilog"
+				"title": "Clear Diagnostics",
+				"category": "xvlog"
 			}
 		],
 		"configuration": {
 			"title": "xvlog linter",
 			"properties": {
+				"verible.path": {
+					"type": "string",
+					"default": "",
+					"description": "Path to the directory containing verible-verilog-format. Leave empty if verible is already on your PATH.",
+					"scope": "resource"
+				},
+				"verible.formatting.arguments": {
+					"type": "string",
+					"default": "",
+					"description": "Additional command-line arguments passed to verible-verilog-format (e.g. --column_limit=100).",
+					"scope": "resource"
+				},
 				"xvlog.path": {
 					"type": "string",
 					"default": "",
